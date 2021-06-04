@@ -34,10 +34,20 @@ int adc[10] = {0}; //Sets up an array of 10 integers and zero's the values
 int avg_adc = 0;
 
 char soil_char[5];
-
 char n_char[5];
-
 char c[] = "\r\n";
+
+char hundred[]   = "100";
+char ninety[] = "90";
+char eighty[] = "80";
+char seventy[] = "70";
+char sixty[] = "60";
+char fifty[] = "50";
+char forty[] = "40";
+char thirty[] = "30";
+char twenty[] = "20";
+char ten[] = "10";
+char zero[] = "00";
 
 void adc_Setup();
 void adc_Sam10();
@@ -105,21 +115,43 @@ void main(void)
                 ltoa(hh,hh_char,10);
                 ltoa(hl,hl_char,10);
 
-//                ser_output(temperature); ser_output(th_char); ser_output(dot); ser_output(tl_char); ser_output(celcius);
-//                ser_output(humidity); ser_output(hh_char); ser_output(dot); ser_output(hl_char); ser_output(percent);
                 ser_output(th_char); ser_output(dot); ser_output(tl_char);
                 ser_output(hh_char); ser_output(dot); ser_output(hl_char);
-                //__delay_cycles(1000000);
 
                 adc_Sam10();      // Function call for adc_samp
-                          // Add all the sampled data and divide by 10 to find average
-                          avg_adc = ((adc[0]+adc[1]+adc[2]+adc[3]+adc[4]+adc[5]+adc[6]+adc[7]+adc[8]+adc[9]) / 10);
+                // Add all the sampled data and divide by 10 to find average
+                avg_adc = ((adc[0]+adc[1]+adc[2]+adc[3]+adc[4]+adc[5]+adc[6]+adc[7]+adc[8]+adc[9]) / 10);
 
-                          ltoa(avg_adc,soil_char,10);
-                          ser_output(soil_char);
-                          ser_output(c);
+                if(avg_adc >= 800)
+                    ser_output(zero);
+                else if(740 < avg_adc && avg_adc <= 800)
+                    ser_output(ten);
+                else if(680 < avg_adc && avg_adc <= 740)
+                    ser_output(twenty);
+                else if(620 < avg_adc && avg_adc <= 680)
+                    ser_output(thirty);
+                else if(560 < avg_adc && avg_adc <= 620)
+                    ser_output(forty);
+                else if(500 < avg_adc && avg_adc <= 560)
+                    ser_output(fifty);
+                else if(440 < avg_adc && avg_adc <= 500)
+                    ser_output(sixty);
+                else if(380 < avg_adc && avg_adc <= 440)
+                    ser_output(seventy);
+                else if(320 < avg_adc && avg_adc <= 380)
+                    ser_output(eighty);
+                else if(200 < avg_adc && avg_adc <= 320)
+                    ser_output(ninety);
+                else
+                    ser_output(hundred);
 
-                __delay_cycles(1000);
+
+                //ltoa(avg_adc,soil_char,10);
+                //ser_output(soil_char);
+                //ser_output(c);
+                __delay_cycles(1000000);
+
+                //__delay_cycles(1000);
                 WDTCTL = WDT_MRST_0_064;
                 }
 
