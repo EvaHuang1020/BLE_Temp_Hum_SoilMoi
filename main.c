@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define pump BIT4
+
 volatile int temp[50];
 volatile int diff[50];
 volatile unsigned int i=0;
@@ -27,7 +29,7 @@ char celcius[] = "\r\n";
 char humidity[] = "Humidity is: ";
 char percent[] = "\r\n";
 
-const char *pTxByte;    //pointer to constant char
+//const char *pTxByte;    //pointer to constant char
 
 //
 int adc[10] = {0}; //Sets up an array of 10 integers and zero's the values
@@ -51,14 +53,20 @@ char zero[] = "00";
 
 void adc_Setup();
 void adc_Sam10();
-//
-
 void ser_output(char *str);
+
 
 
 void main(void)
 {
+
      WDTCTL = WDTPW | WDTHOLD;
+
+     //pump
+     P1DIR = pump;
+//     P1DIR |= pump;
+
+     //DHT11
      BCSCTL1= CALBC1_1MHZ;
      DCOCTL = CALDCO_1MHZ;
      P1SEL = BIT1|BIT2;
@@ -69,20 +77,22 @@ void main(void)
      UCA0MCTL = UCBRS_0;
      UCA0CTL1 &= ~UCSWRST;
      __delay_cycles(2000000);
-        P2DIR |= BIT4; //P2.4 is output
-        P2OUT &= ~BIT4; //initial set P2.4 to low
-        __delay_cycles(20000);
-        P2OUT |= BIT4; //set P2.4 to high
-        __delay_cycles(20); // 20 micro second as high level
-        P2DIR &= ~BIT4; // set to input port
-        P2SEL |= BIT4; // time clock
-        TA1CTL = TASSEL_2|MC_2 ; //timer a control
-        TA1CCTL2 = CAP | CCIE | CCIS_0 | CM_2 | SCS ; // capture mode important!!!
-        _enable_interrupts();
+     P2DIR |= BIT4; //P2.4 is output
+     P2OUT &= ~BIT4; //initial set P2.4 to low
+     __delay_cycles(20000);
+     P2OUT |= BIT4; //set P2.4 to high
+     __delay_cycles(20); // 20 micro second as high level
+     P2DIR &= ~BIT4; // set to input port
+     P2SEL |= BIT4; // time clock
+     TA1CTL = TASSEL_2|MC_2 ; //timer a control
+     TA1CCTL2 = CAP | CCIE | CCIS_0 | CM_2 | SCS ; // capture mode important!!!
+     _enable_interrupts();
 
-        adc_Setup();
+     //soil moisture
+     adc_Setup();
 
         while (1){
+
             //DHT11 sill sent 40bits ,each is 8 bits ,represent as hh,hl,th,tl,checksum
             if (i>=40){
                 for (j = 1; j <= 8; j++){
@@ -115,13 +125,18 @@ void main(void)
                 ltoa(hh,hh_char,10);
                 ltoa(hl,hl_char,10);
 
+                //show temperature and humidity on app
                 ser_output(th_char); ser_output(dot); ser_output(tl_char);
                 ser_output(hh_char); ser_output(dot); ser_output(hl_char);
 
                 adc_Sam10();      // Function call for adc_samp
+
                 // Add all the sampled data and divide by 10 to find average
                 avg_adc = ((adc[0]+adc[1]+adc[2]+adc[3]+adc[4]+adc[5]+adc[6]+adc[7]+adc[8]+adc[9]) / 10);
 
+
+
+                //change the soil moisture data to moisture percentage.
                 if(avg_adc >= 800)
                     ser_output(zero);
                 else if(740 < avg_adc && avg_adc <= 800)
@@ -146,13 +161,17 @@ void main(void)
                     ser_output(hundred);
 
 
-                //ltoa(avg_adc,soil_char,10);
-                //ser_output(soil_char);
-                //ser_output(c);
+                //if Soil Moisture is low then 50%, pump on.
+                if(avg_adc > 560){
+                    P1OUT ^= pump;
+                    __delay_cycles(4000000); //7s
+                }
+
                 __delay_cycles(1000000);
 
                 //__delay_cycles(1000);
                 WDTCTL = WDT_MRST_0_064;
+
                 }
 
         }
@@ -178,7 +197,7 @@ __interrupt void ADC10_ISR(void)
   __bic_SR_register_on_exit(CPUOFF);        // Clear CPUOFF bit from 0(SR)
 }
 
-// ADC set-up function
+// ADC sample conversion function
 void adc_Sam10()
 {
     ADC10CTL0 &= ~ENC;              // Disable Conversion
@@ -187,7 +206,7 @@ void adc_Sam10()
     ADC10CTL0 |= ENC + ADC10SC;     // Enable Conversion and conversion start
     __bis_SR_register(CPUOFF + GIE);// Low Power Mode 0, ADC10_ISR
 }
-
+// ADC set-up function
 void adc_Setup()
 {
     ADC10CTL1 = CONSEQ_2 + INCH_0;                      // Repeat single channel, A0
@@ -195,8 +214,3 @@ void adc_Setup()
     ADC10DTC1 = 0x0A;                                   // 10 conversions
     ADC10AE0 |= 0x01;                                   // P1.0 ADC option select
 }
-
-// ADC sample conversion function
-
-
-
